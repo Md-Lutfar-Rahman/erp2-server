@@ -69,7 +69,7 @@ async function run() {
     app.delete("/products/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        const result = await productColl.deleteOne({ _id: ObjectId(id) });
+        const result = await productColl.deleteOne({ _id: new ObjectId(id) }); // Corrected: `new ObjectId(id)`
         if (result.deletedCount === 0) {
           res.status(404).json({ error: "Product not found" });
         } else {
@@ -82,22 +82,26 @@ async function run() {
     });
 
     // Update a product by ID
-    app.put("/products/:id", async (req, res) => {
+    app.put('/products/:id', async (req, res) => {
       try {
-        const id = req.params.id;
-        const updatedProduct = req.body;
-        const result = await productColl.updateOne(
-          { _id: ObjectId(id) },
-          { $set: updatedProduct }
+        const productId = req.params.id;
+        const updatedProductData = req.body;
+    
+        // Correct usage of `ObjectId` with `new`
+        const result = await productColl.findOneAndUpdate(
+          { _id: new ObjectId(productId) },
+          { $set: updatedProductData },
+          { returnOriginal: false } // Return the updated document
         );
-        if (result.matchedCount === 0) {
-          res.status(404).json({ error: "Product not found" });
-        } else {
-          res.status(200).json(result);
+    
+        if (!result.value) {
+          return res.status(404).send('Product not found');
         }
+    
+        res.status(200).json(result.value); // Send the updated product data
       } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).send('Internal server error');
       }
     });
 
